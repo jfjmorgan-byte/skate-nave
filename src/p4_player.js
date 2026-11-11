@@ -333,10 +333,23 @@ function groundStep(dt) {
   P.v = clamp(P.v + a * dt, -VMAX, VMAX);
   const s0 = P.s, s1 = P.s + P.v * dt;
   for (const k of PATH.kinks) {
-    if (k.d < 0 && ((s0 < k.s && s1 >= k.s) || (s0 > k.s && s1 <= k.s)) && Math.abs(P.v) > 320 && !P.manual) {
-      const pk = pathAt(PATH, k.s + (P.v > 0 ? -0.6 : 0.6));
+    if (!((s0 < k.s && s1 >= k.s) || (s0 > k.s && s1 <= k.s))) continue;
+    const dir = sgn(P.v) || 1;
+    const before = pathAt(PATH, k.s - dir * 0.6), after = pathAt(PATH, k.s + dir * 0.6);
+    const climb = after.ty * dir;                         // > 0 sube y < 0 baja, en el sentido de la marcha
+    const inMid = k.x > MINI.cx + 1 && k.x < BIG.cx - 1;
+    // borde: a mucha velocidad (kicker) o si detrás hay una caída (bordillo, hueco), sales volando
+    if (k.d < 0 && ((Math.abs(P.v) > 320 && !P.manual) || (inMid && climb < -0.7))) {
       P.s = k.s; P.x = k.x; P.y = k.y;
-      startAir(P.v * pk.tx, P.v * pk.ty, 0);
+      startAir(P.v * before.tx, P.v * before.ty, 0);
+      return;
+    }
+    // escalón o bordillo de frente: hay que subirlo de un ollie
+    if (k.d > 0 && inMid && climb > 0.85) {
+      P.s = k.s - dir * 0.6; const q = pathAt(PATH, P.s); P.x = q.x; P.y = q.y;
+      const riser = groundY(k.x + dir * 0.6) - k.y;
+      if (Math.abs(P.v) > 45 && isEasy() && riser <= 12 && !P.manual) { pop(0.4); return; }          // Fácil: ollie automático
+      if (Math.abs(P.v) > 45) { popup('¡BORDILLO!', 19); P.bailKind = 'front'; bailNow(); } else P.v = 0;
       return;
     }
   }
@@ -344,6 +357,14 @@ function groundStep(dt) {
   if (s1 >= PATH.L) { launchVert(1); return; }
   P.s = s1;
   const q = pathAt(PATH, P.s); P.x = q.x; P.y = q.y; P.theta = Math.atan2(q.ty, q.tx);
+  // escaleras: subirlas rodando no se puede; bajarlas solo en Fácil (con traqueteo)
+  const st = zoneAt(ZONES.stairs, P.x);
+  if (st && Math.abs(P.v) > 5) {
+    if (P.v * q.ty > 0) { if (Math.abs(P.v) > 30 && !isEasy()) { popup('¡ESCALERAS!', 19); P.bailKind = 'front'; bailNow(); } else { P.v = 0; P.s -= sgn(q.ty) * 1.5; } return; }
+    if (!isEasy()) { popup('¡ESCALERAS!', 19); P.bailKind = 'front'; bailNow(); return; }
+    const step = Math.floor((P.x - st[0]) / ((st[1] - st[0]) / 4));
+    if (step !== P.lastStep) { P.lastStep = step; SND.boardHit(); shake(1); P.v *= 0.94; P.land = 0.5; }
+  } else if (!st) P.lastStep = -1;
 }
 
 function airUpdate(dt, easy) {
@@ -408,7 +429,8 @@ function airStep(dt) {
   if (P.vy < 0) {
     for (let ri = 0; ri < RAILS.length; ri++) {
       const r0 = railYi(RAILS[ri], x0), r1 = railYi(RAILS[ri], P.x);
-      if (r1 > -1e8 && r0 > -1e8 && y0 >= r0 - 0.5 && P.y <= r1) { P.y = r1; P.rail = ri; catchRail(); return; }
+      const wantsGrind = !RAILS[ri].needKey || P.grindKey || keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
+      if (r1 > -1e8 && r0 > -1e8 && y0 >= r0 - 0.5 && P.y <= r1 && wantsGrind) { P.y = r1; P.rail = ri; catchRail(); return; }
     }
   }
   const gy = groundY(P.x);
@@ -487,6 +509,8 @@ function landGround() {
   const vt = P.vx * p.tx + P.vy * p.ty;
   const vn = Math.abs(P.vx * (-p.ty) + P.vy * p.tx);
   P.s = s; P.v = clamp(vt, -VMAX, VMAX);
+  if (zoneAt(ZONES.pits, P.x)) { P.mode = 'ground'; popup('¡AL HUECO!', 19); P.bailKind = 'front'; bailNow(); return; }
+  if (zoneAt(ZONES.stairs, P.x) && !isEasy()) { P.mode = 'ground'; popup('¡ESCALERAS!', 19); P.bailKind = 'front'; bailNow(); return; }
   if (!evalLanding()) { P.mode = 'ground'; bailNow(); return; }
   P.mode = 'ground'; P.x = p.x; P.y = p.y; P.theta = Math.atan2(p.ty, p.tx);
   finishLanding(0, vn);
@@ -626,7 +650,11 @@ function bailUpdate(dt) {
       b.brot = b.upside ? Math.PI * (1 - k) : 0;
     }
     if (b.ret > 1.05) {
-      const s = b.body.s, f = P.facing;
+      // si caes dentro del hueco o en las escaleras, te levantas en el borde más cercano
+      let s = b.body.s; const f = P.facing;
+      const pit = zoneAt(ZONES.pits, b.body.x), st = zoneAt(ZONES.stairs, b.body.x);
+      if (pit) s = sOfX(PATH, (b.body.x - pit[0] < pit[1] - b.body.x) ? pit[0] - 14 : pit[1] + 14);
+      else if (st) s = sOfX(PATH, st[1] + 12);
       P.mode = 'ground'; P.s = s; P.v = 0; P.bail = null;
       const q = pathAt(PATH, s); P.x = q.x; P.y = q.y; P.theta = Math.atan2(q.ty, q.tx);
       P.crouch = 0.6; P.land = 0.6; P.grace = 0; P.facing = f;

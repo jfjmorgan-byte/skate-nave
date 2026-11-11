@@ -76,3 +76,12 @@ Piezas nuevas en `src/`: `p3c_scene.js` (pared, luces, palomas, ventilador), `p8
   y EL PARKING (sótano con luz de sodio, rampas de madera, rampa de coches con barandilla, columnas, coches aparcados).
 - Fondos de los mapas nuevos en `src/p3e_bgs.js`; objetos del suelo de todos los mapas en `src/p3d_props.js`.
 - Menú: opción MAPA (← →). Sesión libre y contrarreloj usan el mapa elegido; los retos siempre van en La Nave.
+
+## Mapas rediseñados para que no se repitan (11-nov)
+- EL SKATEPARK ahora es una plaza: plaza elevada (0,8 m) con quarter pipe alto en la esquina, escaleras de 4 con barandilla
+  (se coge en la plaza y se baja grindando), manual pad con bordillo (se grinda manteniendo una tecla de grind) y quarter pipe mediano.
+- EL PARKING ahora tiene niveles: rampa de coches a la planta superior, guardarraíl, hueco de 80 px que hay que saltar
+  (si caes dentro, te levantas en el borde) y rampa de bajada.
+- Física nueva (p4 groundStep/landGround): borde con caída → sales volando; bordillo o escalón de frente → caída
+  (en Fácil, si mide ≤ 12, ollie automático); escaleras: bajarlas rodando solo en Fácil, subirlas solo de un ollie.
+- Mapas: `zones` (stairs, pits), `rails` con varios elementos (`kind: 'edge'`, `needKey`). `visualY` pinta los peldaños.

@@ -46,13 +46,13 @@ function drawFloorProps(L, T) {
     { const [x, y] = at(792, -35); L.sprite(PROP_SPR.board, x, y - 24, PROP_MAPS.board, sh(792, -35)); L.rect(x - 1, y - 20, 1, 3, 9); L.rect(x + 5, y - 20, 1, 3, 9); L.rect(x - 1, y - 6, 1, 3, 9); L.rect(x + 5, y - 6, 1, 3, 9); }
     spr('radio', 'radio', RADIO.x, RADIO.z); spr('cone', 'cone', 872, -31);
   } else if (t === 'park') {
-    bench(600, -32, [12, 13, 14, 15], 2); bench(150, -32, [12, 13, 14, 15], 2);
-    spr('bin', 'bin', 700, -31); spr('pack', 'pack2', 262, -30); spr('bottle', 'bottle', 276, -29);
+    bench(650, -32, [12, 13, 14, 15], 2); bench(340, -32, [12, 13, 14, 15], 2);
+    spr('bin', 'bin', 760, -31); spr('pack', 'pack2', 428, -30); spr('bottle', 'bottle', 442, -29);
   } else if (t === 'pool') {
     spr('ring', 'ring', BIG.lip + 18, -24, BIG.H); spr('towel', 'towel', 6, -20, MINI.H);
   } else if (t === 'parking') {
     for (let x = 110; x < WORLD_W - 60; x += 110) { if (groundY(x + 40) > 0.3 || groundY(x) > 0.3) continue; spr('stop', 'stop', x + 46, -33); }
-    spr('cone', 'cone', 300, -28); spr('cone', 'cone', 318, -24); spr('cone', 'cone', 900, -27);
-    spr('pack', 'pack', 230, -30);
+    spr('cone', 'cone', 120, -28); spr('cone', 'cone', 138, -24); spr('cone', 'cone', 985, -27);
+    spr('pack', 'pack', 170, -30);
   }
 }

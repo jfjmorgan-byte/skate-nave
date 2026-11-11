@@ -23,16 +23,31 @@ const MAPS = {
   nave: { n: 'LA NAVE', theme: 'nave', W: 1012, L: { lip: 30, R: 32, base: 0, vext: 6 }, Rr: { cx: 900, R: 72, base: 0, vext: 14 },
     mid: [[62, 0], [340, 0], [392, 24], [532, 24], [584, 0], [900, 0]], rail: [[360, 38], [532, 38], [578, 38 - 24 * 46 / 52]],
     lamps: [215, 385, 555, 720, 880], lampY: 140, lampKind: 'tube', caps: [225, 305], bpm: 84, fence: true, pigeons: [0, 0, 1, 3, 4, 4] },
-  park: { n: 'EL SKATEPARK', theme: 'park', W: 980, L: { lip: 40, R: 48, base: 0, vext: 8 }, Rr: { cx: 860, R: 70, base: 0, vext: 12 },
-    mid: [[88, 0], [330, 0], [374, 22], [514, 22], [558, 0], [860, 0]], rail: [[384, 36], [514, 36], [554, 36 - 22 * 40 / 44]],
-    lamps: [215, 650], lampY: 150, lampKind: 'post', caps: [250, 300], bpm: 92, fence: true, pigeons: [0, 0, 1] },
+  // plaza elevada con rampa alta en la esquina, escaleras de 4 con barandilla, manual pad con bordillo y rampa mediana
+  park: { n: 'EL SKATEPARK', theme: 'park', W: 1000, L: { lip: 34, R: 60, base: 20, vext: 8 }, Rr: { cx: 880, R: 52, base: 0, vext: 10 },
+    mid: [[94, 20], [250, 20], [310, 0], [480, 0], [480, 10], [600, 10], [600, 0], [880, 0]],
+    rails: [{ pts: [[196, 34], [254, 34], [314, 14]], z: 12 }, { pts: [[481, 10], [599, 10]], z: 33, kind: 'edge', needKey: true }],
+    zones: { stairs: [[250, 310]], pits: [] },
+    lamps: [390, 730], lampY: 150, lampKind: 'post', caps: [260, 270], bpm: 92, fence: true, pigeons: [0, 0, 1] },
   pool: { n: 'LA PISCINA', theme: 'pool', W: 680, L: { lip: 44, R: 40, base: 52, vext: 8 }, Rr: { cx: 560, R: 76, base: 0, vext: 24 },
-    mid: [[84, 52], [260, 52], [380, 0], [560, 0]], rail: null,
+    mid: [[84, 52], [260, 52], [380, 0], [560, 0]], rail: null, zones: { stairs: [], pits: [] },
     lamps: [], lampY: 0, lampKind: null, caps: [240, 300], bpm: 96, fence: false, pigeons: [] },
-  parking: { n: 'EL PARKING', theme: 'parking', W: 1100, L: { lip: 30, R: 36, base: 0, vext: 8 }, Rr: { cx: 1010, R: 56, base: 0, vext: 10 },
-    mid: [[66, 0], [380, 0], [560, 40], [700, 40], [840, 0], [1010, 0]], rail: [[570, 54], [700, 54], [836, 54 - 40 * 136 / 140]],
-    lamps: [170, 370, 570, 770, 960], lampY: 112, lampKind: 'sodium', caps: [230, 290], bpm: 78, fence: false, pigeons: [] }
+  // rampa de coches a la planta de arriba, hueco que hay que saltar, guardarraíl para grindar y rampa de bajada
+  parking: { n: 'EL PARKING', theme: 'parking', W: 1150, L: { lip: 30, R: 36, base: 0, vext: 8 }, Rr: { cx: 1060, R: 56, base: 0, vext: 10 },
+    mid: [[66, 0], [220, 0], [420, 36], [560, 36], [560, 6], [640, 6], [640, 36], [760, 36], [940, 0], [1060, 0]],
+    rails: [{ pts: [[432, 50], [556, 50]], z: 12 }], zones: { stairs: [], pits: [[560, 640]] },
+    lamps: [150, 330, 500, 700, 880, 1000], lampY: 112, lampKind: 'sodium', caps: [230, 290], bpm: 78, fence: false, pigeons: [] }
 };
+let ZONES = { stairs: [], pits: [] };
+function zoneAt(list, x) { for (const z of list) if (x > z[0] && x < z[1]) return z; return null; }
+// altura que se dibuja: igual que la física salvo en las escaleras, que se pintan con peldaños
+function visualY(x) {
+  for (const st of ZONES.stairs) if (x > st[0] && x < st[1]) {
+    const n = 4, y0 = groundY(st[0] - 0.01), y1 = groundY(st[1] + 0.01), sw = (st[1] - st[0]) / n;
+    return y0 + (y1 - y0) * Math.min(n, Math.floor((x - st[0]) / sw) + 1) / n;
+  }
+  return groundY(x);
+}
 const MAP_IDS = ['nave', 'park', 'pool', 'parking'];
 let MAP = null, WORLD_W = 0, LWID = 0, MINI = null, BIG = null, MID = null, RAIL_PTS = null, LAMPS = [], LAMP_Y = 140;
 let PATH = null, RAILP = null, RAILS = [];
@@ -134,8 +149,9 @@ function loadMap(id) {
   for (let i = 1; i <= 96; i++) { const a = -Math.PI / 2 + (i / 96) * Math.PI / 2; p.push([BIG.cx + BIG.R * Math.cos(a), BIG.base + BIG.R + BIG.R * Math.sin(a)]); }
   p.push([BIG.lip, BIG.H]);
   PATH = buildPath(p, 0.5);
-  RAILS = RAIL_PTS ? [{ pts: RAIL_PTS, z: RAILZ, kind: 'rail' }] : [];
+  RAILS = (m.rails || (RAIL_PTS ? [{ pts: RAIL_PTS }] : [])).map(r => Object.assign({ z: RAILZ, kind: 'rail' }, r));
   RAILS.forEach(r => { r.path = buildPath(r.pts, 0.5); });
+  ZONES = m.zones || { stairs: [], pits: [] };
   RAILP = RAILS.length ? RAILS[0].path : null;
 }
 function railYi(r, x) {
@@ -299,15 +315,16 @@ function renderMain() {
   function column(px, ramp, sideRamp, deck, midPiece) {
     const wx0 = px / ZM, dw = 1 / ZM;
     let ymin = 1e9, ymax = -1e9;
-    for (let k = 0; k <= 4; k++) { const y = groundY(clamp(wx0 + k * dw / 4, 0, WORLD_W)); ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); }
-    const yc = groundY(clamp(wx0 + dw / 2, 0, WORLD_W));
-    const dy = (groundY(clamp(wx0 + dw * 0.75, 0, WORLD_W)) - groundY(clamp(wx0 + dw * 0.25, 0, WORLD_W))) / (dw * 0.5);
+    for (let k = 0; k <= 4; k++) { const y = visualY(clamp(wx0 + k * dw / 4, 0, WORLD_W)); ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); }
+    const yc = visualY(clamp(wx0 + dw / 2, 0, WORLD_W));
+    const dy = (visualY(clamp(wx0 + dw * 0.75, 0, WORLD_W)) - visualY(clamp(wx0 + dw * 0.25, 0, WORLD_W))) / (dw * 0.5);
+    const pit = zoneAt(ZONES.pits, wx0), st = zoneAt(ZONES.stairs, wx0);
     const th = Math.atan(dy), nx = -Math.sin(th), ny = Math.cos(th);
     const litN = 0.36 + 0.6 * Math.max(0, nx * LW[0] + ny * LW[1]);
     const rTop = Math.floor(LY(ymax, -LANE)), rBot = Math.floor(LY(ymin, LANE));
     for (let r = rTop; r <= rBot; r++) {
       const z = clamp((r - TOPM - FY + yc * COSE * ZM) / KZ, -LANE, LANE);
-      let v = litN + (fbm(wx0 * 0.05, z * 0.08) - 0.5) * 0.12 + floorLight(wx0, z) * 0.8;
+      let v = litN + (fbm(wx0 * 0.05, z * 0.08) - 0.5) * 0.12 + floorLight(wx0, z) * 0.8 - (pit ? 0.32 : 0);
       if (!deck && t !== 'pool') {
         const mk = Math.abs(z + 3 * Math.sin(wx0 * 0.05));
         if (mk < 14) v -= (0.16 - mk * 0.009) * vnoise(wx0 * 0.12, z * 0.4) * 1.4;
@@ -322,6 +339,7 @@ function renderMain() {
         c = ((tx + ty) & 1) ? lit(27, floorLight(wx0, z), px, r) : lit(28, floorLight(wx0, z), px, r);
         if (Math.floor((wx0 - dw) / 3.2) !== tx) c = 29;
       } else if (t === 'parking' && midPiece && Math.abs(dy) > 0.05 && hash2(px >> 2, r >> 1) > 0.94) c = DARK[c];
+      if (st && ((wx0 - st[0]) % ((st[1] - st[0]) / 4)) < 1.3) c = lit(8, T.amb, px, r);     // canto metálico de cada peldaño
       if (r === rTop) c = LIGHT[c];
       L.set(px, r, c);
     }
@@ -339,7 +357,7 @@ function renderMain() {
     }
     if (t !== 'pool') L.set(px, fl + 1, 0);
   }
-  const midSolid = px => groundY(px / ZM) > 0.3;
+  const midSolid = px => visualY(px / ZM) > 0.3 || visualY((px + 1) / ZM) > 0.3;
   for (let px = 0; px < Math.ceil(MINI.cx * ZM); px++) { const wx = px / ZM; column(px, wx < MINI.lip ? M.deck : M.surf, M.side, wx < MINI.lip, false); }
   for (let px = Math.ceil(MINI.cx * ZM); px < Math.floor(BIG.cx * ZM); px++) if (midSolid(px)) column(px, M.mid, M.midSide, false, true);
   for (let px = Math.floor(BIG.cx * ZM); px < w; px++) { const wx = px / ZM; column(px, wx >= BIG.lip ? M.deck : M.surf, M.side, wx >= BIG.lip, false); }
@@ -396,27 +414,38 @@ function renderMain() {
   return L.toCanvas();
 }
 
-// Barandillas (si el mapa tiene)
+// Barandillas y bordillos grindables del mapa
 function renderRail() {
   const T = tod();
   const L = new Layer(LWID, TOPM + H);
   for (const rl of RAILS) {
-    const p = rl.pts;
+    const p = rl.pts, x0 = p[0][0], x1 = p[p.length - 1][0];
+    if (rl.kind === 'edge') {                          // canto metálico del manual pad
+      for (let px = Math.round(x0 * ZM); px <= Math.round(x1 * ZM); px++) {
+        const r = Math.round(LY(railYi(rl, Math.min(px / ZM, x1)), rl.z));
+        L.set(px, r - 1, lit(9, T.amb, px, r)); L.set(px, r, lit(7, T.amb, px, r)); L.set(px, r + 1, 4);
+      }
+      continue;
+    }
     const post = x => {
-      const ry = railYi(rl, x), gy = groundY(x), px = Math.round(x * ZM);
+      const ry = railYi(rl, x), gy = visualY(x), px = Math.round(x * ZM);
       const r0 = Math.round(LY(ry, rl.z)) + 3, r1 = Math.round(LY(gy, rl.z));
       for (let r = r0; r <= r1; r++) { L.set(px - 2, r, 0); L.set(px - 1, r, lit(8, T.amb, px, r)); L.set(px, r, lit(6, T.amb, px, r)); L.set(px + 1, r, lit(4, T.amb, px, r)); L.set(px + 2, r, 0); }
       for (let k = -3; k <= 3; k++) { L.set(px + k, r1, Math.abs(k) === 3 ? 0 : 3); L.set(px + k, r1 + 1, 0); }
     };
-    const posts = [p[0][0] + 4, (p[0][0] + p[1][0]) / 2, p[1][0] - 4];
-    if (p.length > 2) posts.push(p[2][0] - 4);
-    posts.forEach(post);
-    for (let px = Math.round(p[0][0] * ZM); px <= Math.round(p[p.length - 1][0] * ZM); px++) {
-      const r = Math.round(LY(railYi(rl, Math.min(px / ZM, p[p.length - 1][0])), rl.z));
+    const posts = [x0 + 4, x1 - 4];
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i][0], b = p[i + 1][0];
+      if (i > 0) posts.push(a);
+      if (b - a > 90) posts.push((a + b) / 2);
+    }
+    posts.sort((a, b) => a - b).filter((x, i, arr) => i === 0 || x - arr[i - 1] > 12).forEach(post);
+    for (let px = Math.round(x0 * ZM); px <= Math.round(x1 * ZM); px++) {
+      const r = Math.round(LY(railYi(rl, Math.min(px / ZM, x1)), rl.z));
       L.set(px, r - 1, 0); L.set(px, r, lit(10, T.amb, px, r)); L.set(px, r + 1, lit(8, T.amb, px, r + 1)); L.set(px, r + 2, lit(6, T.amb, px, r + 2)); L.set(px, r + 3, 4); L.set(px, r + 4, 0);
     }
-    for (const x of [p[0][0], p[p.length - 1][0]]) {
-      const px = Math.round(x * ZM) + (x === p[0][0] ? -1 : 1), r = Math.round(LY(railYi(rl, x), rl.z));
+    for (const x of [x0, x1]) {
+      const px = Math.round(x * ZM) + (x === x0 ? -1 : 1), r = Math.round(LY(railYi(rl, x), rl.z));
       for (let k = -1; k <= 4; k++) L.set(px, r + k, 0);
     }
   }

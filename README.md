@@ -14,9 +14,9 @@ También puedes descargar `pixel-skate.html` y abrirlo con doble clic.
 - Cuatro mapas, con hora del día (mañana, atardecer, noche):
   - **La Nave**: skatepark dentro de una nave de hormigón, con mini rampa, pirámide con barandilla y rampa grande,
     tubos fluorescentes, ventana con haz de luz y polvo, palomas y ventilador.
-  - **El Skatepark**: exterior de hormigón con funbox y barandilla, ciudad, árboles y farolas.
+  - **El Skatepark**: plaza al aire libre con escaleras y barandilla, manual pad con bordillo, ciudad, árboles y farolas.
   - **La Piscina**: piscina vacía en corte, con parte baja, parte honda, azulejos y coping de piedra.
-  - **El Parking**: sótano con luz de sodio, rampas de madera, rampa de coches y coches aparcados.
+  - **El Parking**: sótano con luz de sodio y niveles: rampa de coches, guardarraíl y un hueco que hay que saltar.
 - Drop in desde las plataformas, caminar fuera de la tabla y lip tricks en el coping.
 - Revert, barra de special, «¡PERFECTO!», 20 retos con medallas, contrarreloj, vestidor y modo vídeo
   (repetición con filtros de móvil, VHS y ojo de pez).
