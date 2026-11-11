@@ -183,7 +183,7 @@ function drawMenuScreen() {
   const top = ly + 6;
   const lw = 144;
   const lx = Math.max(6, Math.round(W / 2 - (lw + 242) / 2));
-  panelBox(lx, top, lw, 130);
+  panelBox(lx, top, lw, 144);
   MENU.forEach((m, i) => {
     const y = top + 7 + i * 14;
     const on = i === game.sel;
@@ -191,16 +191,17 @@ function drawMenuScreen() {
     if (m.id === 'diff') l += ': ' + (SAVE.diff ? 'REALISTA' : 'FÁCIL');
     if (m.id === 'snd') l += ': ' + (SAVE.muted ? 'NO' : 'SÍ');
     if (m.id === 'tod') l += ': ' + TOD[SAVE.tod].n;
+    if (m.id === 'map') l += ': ' + MAPS[SAVE.map].n;
     if (on) { rect(lx + 3, y - 3, lw - 6, 11, 27); drawText('>', lx + 5, y, 21, 0); }
     drawText(l, lx + 11, y, on ? 10 : 7, 0);
   });
-  drawText(SAVE.diff ? 'CAER RECTO Y CON EL TRUCO ACABADO' : 'TOLERANCIA AMPLIA AL ATERRIZAR', lx + 5, top + 120, 6, 0);
+  drawText(SAVE.diff ? 'CAER RECTO Y CON EL TRUCO ACABADO' : 'TOLERANCIA AMPLIA AL ATERRIZAR', lx + 5, top + 134, 6, 0);
   drawCoins(lx + lw - 4, top - 8);
   const nMed = Object.values(SAVE.medals).reduce((a, v) => a + v, 0);
-  drawTextO('MEDALLAS ' + nMed + '/' + RETOS.length * 3, lx, top + 137, 7, 0);
-  drawTextO('COMBO ' + fmt(SAVE.rec.combo), lx, top + 146, 6, 0);
-  drawTextO('AIRE ' + fmtM(SAVE.rec.air) + ' M · MANUAL ' + fmtM(SAVE.rec.manual) + ' S', lx, top + 155, 6, 0);
-  drawTextO('CONTRARRELOJ ' + fmt(SAVE.rec.timed), lx, top + 164, 6, 0);
+  drawTextO('MEDALLAS ' + nMed + '/' + RETOS.length * 3, lx, top + 151, 7, 0);
+  drawTextO('COMBO ' + fmt(SAVE.rec.combo), lx, top + 160, 6, 0);
+  drawTextO('AIRE ' + fmtM(SAVE.rec.air) + ' M · MANUAL ' + fmtM(SAVE.rec.manual) + ' S', lx, top + 169, 6, 0);
+  drawTextO('CONTRARRELOJ ' + fmt(SAVE.rec.timed), lx, top + 178, 6, 0);
   const cx = lx + lw + 6, cw = Math.min(W - cx - 4, 242);
   const CL = CONTROLS.slice(0, 18);
   panelBox(cx, top, cw, 30 + CL.length * 8);
@@ -386,6 +387,7 @@ function frameLoop(t) {
 }
 function boot() {
   loadSave();
+  loadMap(SAVE.map); resetPigeons(); SND.setBpm(MAP.bpm);
   SND.setMuted(SAVE.muted);
   applySize(true);
   buildLayers();

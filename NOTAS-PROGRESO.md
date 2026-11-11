@@ -63,3 +63,16 @@ Piezas nuevas en `src/`: `p3c_scene.js` (pared, luces, palomas, ventilador), `p8
 - Tonos: pared de hormigón más oscura y suelo de hormigón claro, casi blanco (FLOOR_R hasta el índice 9).
 - Bombeo más fácil: vale mantener Shift o pulsarlo hasta 0,45 s antes; se bombea al bajar y también al subir cada curva
   (menos ganancia al subir); en Fácil la ganancia es un 20 % mayor; aviso «SHIFT: ¡BOMBEA!» junto a la barra de velocidad.
+
+## Publicado (9-nov)
+- Repositorio: https://github.com/jfjmorgan-byte/skate-nave (rama main). Enlace para jugar: https://jfjmorgan-byte.github.io/skate-nave/
+- Para actualizarlo: sh src/build.sh, commit y git push (Pages publica index.html de main).
+
+## Mapas nuevos (11-nov)
+- El nivel ya no está escrito a mano: `MAPS` en `src/p3_level.js` define cada mapa por piezas (rampa izquierda L con lip/R/base/vext,
+  tramo central `mid` como polilínea, rampa derecha Rr, barandilla, lámparas, techo de aire, tempo de la música). `loadMap(id)` lo carga.
+- Mapas: LA NAVE (el de siempre), EL SKATEPARK (exterior de hormigón, funbox con barandilla, ciudad, árboles, farolas de noche),
+  LA PISCINA (piscina vacía en corte: parte baja a 52, pendiente y parte honda; azulejos, coping de piedra, escalera, palmeras)
+  y EL PARKING (sótano con luz de sodio, rampas de madera, rampa de coches con barandilla, columnas, coches aparcados).
+- Fondos de los mapas nuevos en `src/p3e_bgs.js`; objetos del suelo de todos los mapas en `src/p3d_props.js`.
+- Menú: opción MAPA (← →). Sesión libre y contrarreloj usan el mapa elegido; los retos siempre van en La Nave.

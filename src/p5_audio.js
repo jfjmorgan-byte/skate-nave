@@ -140,6 +140,7 @@ const SND = (() => {
     unlock() { try { if (!ac) init(); if (ac && ac.state === 'suspended') ac.resume(); } catch (e) { ac = null; } },
     tick,
     get muted() { return muted; },
+    setBpm(b) { M.bpm = b || 84; },
     setMuted(m) { muted = m; if (ac) master.gain.setTargetAtTime(m ? 0 : 0.85, ac.currentTime, 0.03); },
     toggle() { this.setMuted(!muted); return muted; },
     roll(speed, wood, on) {

@@ -5,7 +5,7 @@
 const SAVE_KEY = 'pixelskate_lanave_v2', OLD_KEY = 'pixelskate_lanave_v1';
 function defaultSave() {
   return {
-    diff: 0, tod: 0, muted: false, coins: 0, medals: {}, ownB: [], ownW: [],
+    diff: 0, tod: 0, map: 'nave', muted: false, coins: 0, medals: {}, ownB: [], ownW: [],
     cust: { stance: 0, head: 0, hat: 0, shirt: 7, print: 0, pants: 1, legs: 0, shoes: 2, skin: 1, prot: 1, acc: 0, board: 0, wheels: 0 },
     rec: { combo: 0, air: 0, session: 0, manual: 0, timed: 0 }
   };
@@ -30,7 +30,7 @@ function loadSave() {
     const c = SAVE.cust, lim = (k, n) => { c[k] = clamp(c[k] | 0, 0, n - 1); };
     lim('stance', 2); lim('head', 4); lim('hat', COLORS.length); lim('shirt', COLORS.length); lim('pants', COLORS.length);
     lim('shoes', COLORS.length); lim('skin', SKINS.length); lim('print', PRINTS.length); lim('legs', LEGS.length);
-    lim('prot', PROTS.length); lim('acc', ACCS.length); lim('board', BOARDS.length); SAVE.tod = clamp(SAVE.tod | 0, 0, 2); lim('wheels', WHEELS.length);
+    lim('prot', PROTS.length); lim('acc', ACCS.length); lim('board', BOARDS.length); SAVE.tod = clamp(SAVE.tod | 0, 0, 2); if (!MAPS[SAVE.map]) SAVE.map = 'nave'; lim('wheels', WHEELS.length);
     if (!boardOwned(c.board)) c.board = 0;
     if (!wheelOwned(c.wheels)) c.wheels = 0;
     SAVE.coins = Math.max(0, SAVE.coins | 0);
@@ -108,11 +108,18 @@ function awardMedal(i, tier) {
   P.celebrate = 1.4;
   SND.win(); writeSave();
 }
+// Carga el mapa (y su escenario) solo si cambia
+function ensureMap(id) {
+  if (MAP && MAP.id === id && LAYERS) return;
+  loadMap(id); resetPigeons(); buildLayers(); SND.setBpm(MAP.bpm);
+  for (const p of PARTS) p.life = 0;
+}
 function startPlay(mode, reto) {
+  ensureMap(mode === 'retos' ? 'nave' : SAVE.map);
   game.scr = 'play'; game.mode = mode; game.reto = reto === undefined ? -1 : reto;
   game.timed = mode === 'timed' || (mode === 'retos' && RETOS[game.reto] && !!RETOS[game.reto].timed);
   game.timeLeft = 120; game.over = 0;
-  score = 0; resetPlayer(170, 1); placeOnDeck(-1, 16, 1);
+  score = 0; resetPlayer(170, 1); placeOnDeck(-1, undefined, 1);
   HUD.air = null; HUD.bank = null; HUD.lost = 0; HUD.medal = null; HUD.reto = 2.5;
   popups.length = 0; game.hintT = 8;
   resetRec(); JUICE.stop = 0; JUICE.shake = 0;
@@ -144,7 +151,7 @@ function updateCamera(dt, snap) {
 // ---------- Menús ----------
 const MENU = [
   { id: 'retos', l: 'RETOS DEL PARQUE' }, { id: 'free', l: 'SESIÓN LIBRE' }, { id: 'timed', l: 'CONTRARRELOJ (2 MIN)' }, { id: 'vest', l: 'VESTIDOR' },
-  { id: 'tod', l: 'HORA' }, { id: 'diff', l: 'DIFICULTAD' }, { id: 'snd', l: 'SONIDO' }, { id: 'ctrl', l: 'CONTROLES' }
+  { id: 'map', l: 'MAPA' }, { id: 'tod', l: 'HORA' }, { id: 'diff', l: 'DIFICULTAD' }, { id: 'snd', l: 'SONIDO' }, { id: 'ctrl', l: 'CONTROLES' }
 ];
 const CONTROLS = [
   ['↑', 'IMPULSAR (EMPUJAR CON EL PIE)'],
@@ -181,6 +188,7 @@ function menuUpdate() {
   const it = MENU[game.sel].id;
   if (it === 'diff' && (pressed.ArrowLeft || pressed.ArrowRight || pOK())) { SAVE.diff = 1 - SAVE.diff; SND.ui(); writeSave(); return; }
   if (it === 'snd' && (pressed.ArrowLeft || pressed.ArrowRight || pOK())) { SAVE.muted = !SAVE.muted; SND.setMuted(SAVE.muted); SND.ui(); writeSave(); return; }
+  if (it === 'map' && (pressed.ArrowLeft || pressed.ArrowRight || pOK())) { const i = MAP_IDS.indexOf(SAVE.map); SAVE.map = MAP_IDS[(i + (pressed.ArrowLeft ? MAP_IDS.length - 1 : 1)) % MAP_IDS.length]; SND.ui(); writeSave(); ensureMap(SAVE.map); return; }
   if (it === 'tod' && (pressed.ArrowLeft || pressed.ArrowRight || pOK())) { SAVE.tod = (SAVE.tod + (pressed.ArrowLeft ? 2 : 1)) % 3; SND.ui(); writeSave(); buildLayers(); return; }
   if (pOK()) {
     SND.uiOk();
@@ -203,7 +211,7 @@ function retosUpdate() {
 }
 function resultsUpdate() {
   if (pressed.KeyR) { SND.uiOk(); startPlay(game.mode, game.reto); return; }
-  if (pOK() || pBack()) { SND.ui(); game.scr = game.mode === 'retos' ? 'retos' : 'menu'; }
+  if (pOK() || pBack()) { SND.ui(); game.scr = game.mode === 'retos' ? 'retos' : 'menu'; if (game.scr === 'menu') ensureMap(SAVE.map); }
 }
 function openVest(from) { game.scr = 'vest'; game.from = from; game.vsel = 0; vest.board = SAVE.cust.board; vest.wheels = SAVE.cust.wheels; game.msg = ''; }
 function closeVest() {
@@ -267,7 +275,7 @@ function pauseUpdate() {
     else if (s === 'VER REPETICIÓN') openReplay(lastFrames(15), 'ÚLTIMOS 15 SEGUNDOS');
     else if (s === 'MEJOR CLIP') openReplay(BEST_CLIP.frames, 'MEJOR CLIP: ' + fmt(BEST_CLIP.total) + ' PUNTOS');
     else if (s === 'CONTROLES') { game.scr = 'controls'; game.from = 'pause'; }
-    else { game.scr = 'menu'; if (score > SAVE.rec.session) SAVE.rec.session = score; writeSave(); }
+    else { game.scr = 'menu'; ensureMap(SAVE.map); if (score > SAVE.rec.session) SAVE.rec.session = score; writeSave(); }
   }
 }
 

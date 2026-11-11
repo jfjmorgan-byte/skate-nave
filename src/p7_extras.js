@@ -43,7 +43,7 @@ let skidCount = 0;
 function skidMark(x, z) {
   if (!LAYERS || skidCount > 4000) return;
   const y = groundY(x);
-  if (Math.abs(y) > 0.5 && !(x > PYR.x1 && x < PYR.x2)) return;
+  if (Math.abs(groundY(x + 2) - groundY(x - 2)) > 0.6) return;     // solo en superficies planas
   const c = LAYERS.main.getContext('2d');
   c.fillStyle = PAL_HEX[isWood(x) ? 12 : 3];
   for (const dz of [-3, 3]) {
@@ -114,18 +114,18 @@ function walkUpdate(dt) {
   const mv = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
   if (mv) P.wdir = mv;
   P.vx = approach(P.vx || 0, mv * WALK_SP, 420 * dt);
-  const lo = P.onDeck < 0 ? 3 : P.onDeck > 0 ? 977 : 52, hi = P.onDeck < 0 ? 26 : P.onDeck > 0 ? 1009 : 928;
+  const lo = P.onDeck < 0 ? 3 : P.onDeck > 0 ? BIG.lip + 5 : MINI.cx - 10, hi = P.onDeck < 0 ? MINI.lip - 4 : P.onDeck > 0 ? WORLD_W - 3 : BIG.cx + 28;
   let nx = P.x + P.vx * dt;
   if (nx < lo || nx > hi) { nx = clamp(nx, lo, hi); P.vx = 0; }
   P.x = nx; P.y = groundY(P.x); P.theta = 0;
   P.wph += Math.abs(P.vx) * dt * 0.17;
   if (!mv && Math.abs(P.vx) < 1) P.wph = approach(P.wph % Math.PI, 0, dt * 3);
-  if (!P.onDeck && pressed.ArrowUp && (P.x <= 60 || P.x >= 920)) startClimb(P.x < 500 ? -1 : 1, true);
+  if (!P.onDeck && pressed.ArrowUp && (P.x <= MINI.cx - 2 || P.x >= BIG.cx + 20)) startClimb(P.x < WORLD_W / 2 ? -1 : 1, true);
   else if (P.onDeck && pressed.ArrowDown) startClimb(P.onDeck, false);
   else if (pressed.KeyE) mountBoard();
 }
 function startClimb(side, up) {
-  const sFloor = side < 0 ? sOfX(PATH, 56) : sOfX(PATH, 924);
+  const sFloor = side < 0 ? sOfX(PATH, MINI.cx - 6) : sOfX(PATH, BIG.cx + 24);
   const sLip = side < 0 ? 0 : PATH.L;
   const deckX = side < 0 ? MINI.lip - 12 : BIG.lip + 12;
   P.climb = { t: 0, dur: side < 0 ? 0.8 : 1.1, side, up, sFloor, sLip, deckX };
@@ -175,7 +175,7 @@ function drawWalker() {
 // ---------- Plataformas y drop in ----------
 function placeOnDeck(side, x, facing) {
   P.mode = 'deck'; P.deck = side; P.onDeck = side;
-  P.x = clamp(x === undefined ? (side < 0 ? 16 : 994) : x, side < 0 ? 3 : 977, side < 0 ? 26 : 1009);
+  P.x = clamp(x === undefined ? (side < 0 ? MINI.lip - 14 : BIG.lip + 22) : x, side < 0 ? 3 : BIG.lip + 5, side < 0 ? MINI.lip - 4 : WORLD_W - 3);
   P.y = side < 0 ? MINI.H : BIG.H; P.theta = 0; P.v = 0; P.vx = 0;
   P.facing = facing || -side; P.drop = null; P.kick = null; P.lipKey = null;
 }
@@ -321,7 +321,7 @@ function contextHint() {
   if (P.mode === 'deck' && !P.drop) return P.facing === -P.deck ? '→ / ↑ DROP IN · E BAJARTE DE LA TABLA'.replace('→', P.deck < 0 ? '→' : '←') : '← → GIRARTE HACIA LA RAMPA';
   if (P.mode === 'walk' && !P.climb) {
     if (P.onDeck) return '↓ BAJAR · E SUBIRTE A LA TABLA';
-    if (P.x <= 60 || P.x >= 920) return '↑ SUBIR A LA PLATAFORMA · E SUBIRTE A LA TABLA';
+    if (P.x <= MINI.cx - 2 || P.x >= BIG.cx + 20) return '↑ SUBIR A LA PLATAFORMA · E SUBIRTE A LA TABLA';
     return '← → CAMINAR · E SUBIRTE A LA TABLA';
   }
   if (P.mode === 'lip') return '← → EQUILIBRIO · SUELTA LA TECLA PARA VOLVER';

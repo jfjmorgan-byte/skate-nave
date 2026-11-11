@@ -92,7 +92,7 @@ function startAir(vx, vy, vert) {
 }
 function launchVert(side) {
   // techo de aire: 2,2 m en la mini, 4 m en la grande (se pierde el exceso de energía)
-  const sp = Math.min(Math.abs(P.v), side < 0 ? 225 : 305);
+  const sp = Math.min(Math.abs(P.v), MAP.caps[side < 0 ? 0 : 1]);
   if (P.lipKey && startLip(side, P.lipKey)) return;     // con la tecla mantenida te clavas en el coping a cualquier velocidad
   if (sp < 26) { P.s = side < 0 ? 0.01 : PATH.L - 0.01; P.v = 0; return; }
   P.x = side < 0 ? MINI.lip : BIG.lip; P.y = side < 0 ? MINI.H : BIG.H;

@@ -10,6 +10,13 @@ const KW = () => COSE * ZM;
 
 // part = 'wall': muro de hormigón pegado a las rampas (se mueve con ellas); part = 'ceil': techo (más lento, parallax)
 function renderBG(w, part) {
+  const t = theme();
+  if (t === 'park') return renderBG_park(w, part);
+  if (t === 'pool') return renderBG_pool(w, part);
+  if (t === 'parking') return renderBG_parking(w, part);
+  return renderBG_nave(w, part);
+}
+function renderBG_nave(w, part) {
   const T = tod(), ti = todIdx();
   const h = TOPM + H;
   const L = new Layer(w, h);
@@ -195,10 +202,10 @@ function buildBeamPattern() {
   // halo de los tubos: cono de luz tramado hacia abajo
   HALO = document.createElement('canvas'); HALO.width = 120; HALO.height = 90;
   const hx = HALO.getContext('2d'), hi = hx.createImageData(120, 90), hu = new Uint32Array(hi.data.buffer);
-  const hd = T.tube * 0.9;
+  const hd = T.tube * 0.9 * Math.max(0.35, lampScale()), kind = MAP.lampKind, hc = kind === 'sodium' ? [20, 21] : kind === 'post' ? [16, 21] : [9, 10];
   for (let j = 0; j < 90; j++) for (let i = 0; i < 120; i++) {
     const spread = 18 + j * 0.45, dx = (i - 60) / spread, f = (1 - dx * dx) * (1 - j / 90);
-    if (f > 0 && bay(i, j) < f * hd) hu[j * 120 + i] = PAL32[bay(i + 1, j + 2) < 0.5 ? 9 : 10];
+    if (f > 0 && bay(i, j) < f * hd) hu[j * 120 + i] = PAL32[bay(i + 1, j + 2) < 0.5 ? hc[0] : hc[1]];
   }
   hx.putImageData(hi, 0, 0);
 }
@@ -233,6 +240,7 @@ function updateDust(dt, tm) {
   }
 }
 function drawDust(tm) {
+  if (theme() !== 'nave') return;
   if (tod().beamOn < 0.3) return;
   const g = beamGeom(), T = tod();
   for (const d of DUST) {
@@ -255,22 +263,11 @@ function updateFlicker(dt) {
     else { flickOn = true; flickT = Math.random() < 0.5 ? 0.04 + Math.random() * 0.1 : 0.8 + Math.random() * 2.5; }
   }
 }
-function drawLamps() {
-  for (let i = 0; i < LAMPS.length; i++) {
-    const on = i !== FLICK || flickOn;
-    const cx = Math.round(SX(LAMPS[i])), cy = Math.round(SY(LAMP_Y, -10));
-    if (cx < -70 || cx > W + 70 || cy < -10) continue;
-    if (on) ctx.drawImage(HALO, cx - 60, cy + 4);
-    rect(cx - 13, 0, 1, Math.max(0, cy - 2), 1); rect(cx + 12, 0, 1, Math.max(0, cy - 2), 1);
-    rect(cx - 17, cy - 3, 34, 7, 0);
-    rect(cx - 16, cy - 2, 32, 2, 4); rect(cx - 16, cy - 2, 32, 1, 6);
-    rect(cx - 15, cy, 30, 1, on ? 10 : 6); rect(cx - 15, cy + 1, 30, 1, on ? 29 : 5); rect(cx - 16, cy + 2, 32, 1, 2);
-  }
-}
 // ---------- Palomas sobre los tubos: se espantan con los golpes ----------
 const PIGEON_SIT = [['.kk..', 'kgGk.', '.kGGk', '..kk.'], ['..kk.', '.kgGk', '.kGGk', '..kk.']];
 const PIGEON_FLY = [['k...k', 'gkGkg', '.kGk.', '..k..'], ['.....', 'kgGgk', '.kGk.', '.....']];
-const PIGEONS = [0, 0, 1, 3, 4, 4].map((li, i) => ({ li, ox: (i % 2 ? 6 : -9) + (i * 3) % 5, st: 'sit', x: 0, y: 0, vx: 0, vy: 0, t: Math.random() * 5, back: 0 }));
+let PIGEONS = [];
+function resetPigeons() { PIGEONS = (MAP.pigeons || []).map((li, i) => ({ li, ox: (i % 2 ? 6 : -9) + (i * 3) % 5, st: 'sit', x: 0, y: 0, vx: 0, vy: 0, t: Math.random() * 5, back: 0 })); }
 function spookPigeons(x) {
   for (const p of PIGEONS) if (p.st === 'sit' && Math.abs(LAMPS[p.li] - x) < 420) {
     p.st = 'fly'; p.x = LAMPS[p.li] + p.ox; p.y = LAMP_Y + 5; p.vx = (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 60); p.vy = 50 + Math.random() * 40; p.back = 8 + Math.random() * 8;
@@ -303,6 +300,7 @@ function drawPigeons() {
 }
 // ---------- Ventilador, LED de la radio y brillos en el coping ----------
 function drawFanBlades(tm) {
+  if (theme() !== 'nave') return;
   const baseRow = FY + WALLZ * SINE * ZM;
   const cx = FAN.x - cam.xi, cy = Math.round(baseRow - FAN.y * KW()) + cam.upi;
   if (cx < -20 || cx > W + 20) return;
@@ -317,19 +315,6 @@ function drawFanBlades(tm) {
     }
   }
   rect(cx - 1, cy - 1, 3, 3, 2); rect(cx, cy, 1, 1, 7);
-}
-function drawDetails(tm) {
-  // LED de la radio al ritmo de la música
-  const rx = Math.round(SX(RADIO.x)) + 7, ry = Math.round(SY(0, RADIO.z)) - 7;
-  if (rx > -4 && rx < W + 4 && !SND.muted && (tm * 1.4) % 1 < 0.5) rect(rx, ry, 1, 1, 21);
-  // brillo que recorre los copings
-  for (const [lx, ly, ph] of [[MINI.lip, MINI.H, 0], [BIG.lip, BIG.H, 1.3]]) {
-    const t = (tm * 0.45 + ph) % 3;
-    if (t > 1) continue;
-    const z = lerp(-LANE, LANE, t);
-    const x = Math.round(SX(lx)) - 1, y = Math.round(SY(ly, z));
-    rect(x, y, 1, 1, 10); rect(x, y - 1, 1, 1, 9); rect(x - 1, y, 1, 1, 9);
-  }
 }
 
 // ---------- Construcción y dibujo de capas ----------
@@ -349,25 +334,7 @@ function rebuildBG() {
   buildBeamPattern();
 }
 function updateScene(dt, tm) { updateDust(dt, tm); updateFlicker(dt); updatePigeons(dt); }
-function drawSceneBack() {
-  const bgx = Math.round(cam.x * PAR_BG);
-  ctx.drawImage(LAYERS.ceil, -bgx, -TOPM + cam.upi);
-  ctx.drawImage(LAYERS.wall, -cam.xi, -TOPM + cam.upi);
-  drawFanBlades(game.t);
-  ctx.drawImage(LAYERS.main, -cam.xi, -TOPM + cam.upi);
-  drawDetails(game.t);
-  drawBeam();
-  drawLamps();
-  drawPigeons();
-}
 function drawRailLayer() { ctx.drawImage(LAYERS.rail, -cam.xi, -TOPM + cam.upi); }
-function drawFence() {
-  const fx = Math.round(cam.x * PAR_FG);
-  if (fx > 300) return;
-  const psx = (typeof P !== 'undefined' && P.x !== undefined) ? SX(P.x) : -999;
-  const behind = psx > -fx - 30 && psx < -fx + 250;
-  ctx.drawImage(behind ? LAYERS.fenceThin : LAYERS.fence, -fx - 10, -TOPM + cam.upi);
-}
 // Sombra tramada sobre la superficie
 function drawShadow(x, z, hgt, wide) {
   const gy = groundY(x);
@@ -380,4 +347,69 @@ function drawShadow(x, z, hgt, wide) {
     if (d > 1) continue;
     if (bay(cx + xx, cy + y) < dens * (1.15 - d * 0.6)) ctx.fillRect(cx + xx, cy + y, 1, 1);
   }
+}
+// ---------- Detalles por mapa (cada fotograma) ----------
+function drawDetails(tm) {
+  const t = theme();
+  if (t === 'nave') {                                   // LED de la radio al ritmo de la música
+    const rx = Math.round(SX(RADIO.x)) + 7, ry = Math.round(SY(0, RADIO.z)) - 7;
+    if (rx > -4 && rx < W + 4 && !SND.muted && (tm * 1.4) % 1 < 0.5) rect(rx, ry, 1, 1, 21);
+  }
+  if (MATS[t].coping !== 'metal') return;
+  for (const [lx, ly, ph] of [[MINI.lip, MINI.H, 0], [BIG.lip, BIG.H, 1.3]]) {   // brillo que recorre los copings
+    const k = (tm * 0.45 + ph) % 3;
+    if (k > 1) continue;
+    const z = lerp(-LANE, LANE, k);
+    const x = Math.round(SX(lx)) - 1, y = Math.round(SY(ly, z));
+    rect(x, y, 1, 1, 10); rect(x, y - 1, 1, 1, 9); rect(x - 1, y, 1, 1, 9);
+  }
+}
+// Luces: tubos colgantes (nave), lámparas de sodio (parking) o farolas (skatepark)
+function drawLamps() {
+  const kind = MAP.lampKind;
+  if (!kind) return;
+  const night = lampScale() > 0.3;
+  for (let i = 0; i < LAMPS.length; i++) {
+    const on = (i !== FLICK || flickOn) && (kind !== 'post' || night);
+    const cx = Math.round(SX(LAMPS[i])), cy = Math.round(SY(LAMP_Y, -10));
+    if (cx < -70 || cx > W + 70 || cy < -10) continue;
+    if (kind === 'post') {
+      const by = Math.round(SY(0, -30));
+      if (on) ctx.drawImage(HALO, cx - 60, cy + 3);
+      rect(cx - 2, cy, 4, by - cy, 0); rect(cx - 1, cy, 2, by - cy, 3); rect(cx - 1, cy, 1, by - cy, 5);
+      rect(cx - 4, by - 3, 8, 3, 0); rect(cx - 3, by - 2, 6, 1, 3);
+      rect(cx - 7, cy - 4, 14, 5, 0); rect(cx - 6, cy - 3, 12, 2, 3); rect(cx - 5, cy - 1, 10, 1, on ? 21 : 5);
+      continue;
+    }
+    if (on) ctx.drawImage(HALO, cx - 60, cy + 4);
+    if (kind === 'sodium') {
+      rect(cx - 1, 0, 2, Math.max(0, cy - 2), 1);
+      rect(cx - 10, cy - 3, 20, 6, 0); rect(cx - 9, cy - 2, 18, 2, 3);
+      rect(cx - 8, cy, 16, 1, on ? 21 : 5); rect(cx - 8, cy + 1, 16, 1, on ? 20 : 4);
+      continue;
+    }
+    rect(cx - 13, 0, 1, Math.max(0, cy - 2), 1); rect(cx + 12, 0, 1, Math.max(0, cy - 2), 1);
+    rect(cx - 17, cy - 3, 34, 7, 0);
+    rect(cx - 16, cy - 2, 32, 2, 4); rect(cx - 16, cy - 2, 32, 1, 6);
+    rect(cx - 15, cy, 30, 1, on ? 10 : 6); rect(cx - 15, cy + 1, 30, 1, on ? 29 : 5); rect(cx - 16, cy + 2, 32, 1, 2);
+  }
+}
+function drawSceneBack() {
+  const bgx = Math.round(cam.x * PAR_BG);
+  ctx.drawImage(LAYERS.ceil, -bgx, -TOPM + cam.upi);
+  ctx.drawImage(LAYERS.wall, -cam.xi, -TOPM + cam.upi);
+  drawFanBlades(game.t);
+  ctx.drawImage(LAYERS.main, -cam.xi, -TOPM + cam.upi);
+  drawDetails(game.t);
+  if (theme() === 'nave') drawBeam();
+  drawLamps();
+  drawPigeons();
+}
+function drawFence() {
+  if (!MAP.fence) return;
+  const fx = Math.round(cam.x * PAR_FG);
+  if (fx > 300) return;
+  const psx = (typeof P !== 'undefined' && P.x !== undefined) ? SX(P.x) : -999;
+  const behind = psx > -fx - 30 && psx < -fx + 250;
+  ctx.drawImage(behind ? LAYERS.fenceThin : LAYERS.fence, -fx - 10, -TOPM + cam.upi);
 }
