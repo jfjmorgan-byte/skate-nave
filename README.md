@@ -11,10 +11,13 @@ También puedes descargar `pixel-skate.html` y abrirlo con doble clic.
 
 - Pixel art de verdad: lienzo de 270 px de alto, paleta limitada, tramado Bayer y fuente propia de 3×5 con tildes y Ñ.
 - Skater y tabla en vóxeles con render 3D (flips, giros de 180/360/540, grabs, manuals, grinds y caídas).
-- La nave: hormigón, tubos fluorescentes, ventana con haz de luz y polvo, palomas, ventilador, valla en la entrada
-  y hora del día (mañana, atardecer, noche).
-- Mini rampa, pirámide con barandilla y rampa grande; drop in desde las plataformas, caminar fuera de la tabla
-  y lip tricks en el coping.
+- Cuatro mapas, con hora del día (mañana, atardecer, noche):
+  - **La Nave**: skatepark dentro de una nave de hormigón, con mini rampa, pirámide con barandilla y rampa grande,
+    tubos fluorescentes, ventana con haz de luz y polvo, palomas y ventilador.
+  - **El Skatepark**: exterior de hormigón con funbox y barandilla, ciudad, árboles y farolas.
+  - **La Piscina**: piscina vacía en corte, con parte baja, parte honda, azulejos y coping de piedra.
+  - **El Parking**: sótano con luz de sodio, rampas de madera, rampa de coches y coches aparcados.
+- Drop in desde las plataformas, caminar fuera de la tabla y lip tricks en el coping.
 - Revert, barra de special, «¡PERFECTO!», 20 retos con medallas, contrarreloj, vestidor y modo vídeo
   (repetición con filtros de móvil, VHS y ojo de pez).
 - Teclado, mando y controles táctiles.
